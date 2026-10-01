@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: honey-chain-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    # Single instance: the IoT simulator's in-process guard plus one
+    # instance guarantees the 4s telemetry loop starts exactly once.
+    numInstances: 1
+    # Render health monitoring hits the existing Express endpoint.
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # SQLite file lives on the persistent disk (db.js reads HONEY_DB).
+      - key: HONEY_DB
+        value: /data/honeychain.db
+    disk:
+      name: honeychain-data
+      mountPath: /data
+      sizeGB: 1

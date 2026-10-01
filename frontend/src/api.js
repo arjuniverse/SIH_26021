@@ -1,4 +1,6 @@
-const BASE = '/api';
+// Same-origin by default: local Vite proxy in dev, Vercel rewrite in prod.
+// Override with VITE_API_BASE (e.g. direct Render URL) only if needed.
+const BASE = import.meta.env.VITE_API_BASE || '/api';
 
 // ---------- offline support ----------
 const CACHE_KEY = (p) => `hc:${p}`;
