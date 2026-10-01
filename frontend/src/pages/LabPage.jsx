@@ -13,7 +13,7 @@ export default function LabPage() {
   const [result, setResult] = useState(null);
 
   const load = () => api.labQueue().then(setQueue).catch(() => setQueue([]));
-  useEffect(load, [tick]);
+  useEffect(() => { load(); }, [tick]);
 
   async function qualify() {
     const r = await api.qualify({ ...form, batch_id: selected.batch_id, lab_code: 'KVIC-Lab-BL', tester: 'Dr. Anita Kulkarni' });

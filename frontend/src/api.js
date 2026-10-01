@@ -1,12 +1,64 @@
 const BASE = '/api';
 
+// ---------- offline support ----------
+const CACHE_KEY = (p) => `hc:${p}`;
+const GET_TTL = 15000;
+export const isOnline = () => (typeof navigator === 'undefined' ? true : navigator.onLine !== false);
+export const pendingActions = () => {
+  try { return JSON.parse(localStorage.getItem('hc:pending') || '[]'); } catch { return []; }
+};
+export function enqueuePending(action, payload) {
+  const q = pendingActions();
+  q.push({ action, payload, at: new Date().toISOString() });
+  localStorage.setItem('hc:pending', JSON.stringify(q));
+}
+export async function flushPending(deviceId = 'DEV-RK-001') {
+  const q = pendingActions();
+  if (!q.length) return 0;
+  try {
+    const res = await fetch(`${BASE}/offline/sync`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ device_id: deviceId, items: q }),
+    });
+    if (res.ok) { localStorage.removeItem('hc:pending'); window.dispatchEvent(new CustomEvent('hc:sync')); }
+    return (await res.json()).queued || 0;
+  } catch { return 0; }
+}
+
 async function request(path, opts = {}) {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...opts,
-  });
-  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
-  return res.json();
+  const method = (opts.method || 'GET').toUpperCase();
+  try {
+    const res = await fetch(`${BASE}${path}`, {
+      headers: { 'Content-Type': 'application/json' },
+      ...opts,
+    });
+    if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
+    const data = await res.json();
+    if (method === 'GET') {
+      try {
+        localStorage.setItem(CACHE_KEY(path), JSON.stringify({ at: Date.now(), data }));
+        localStorage.removeItem(`hc:pending:${path}`);
+      } catch { /* storage full — ignore */ }
+    }
+    return data;
+  } catch (err) {
+    // offline fallback: serve cached GET, recreate pending POST
+    if (method === 'GET') {
+      const cached = localStorage.getItem(CACHE_KEY(path));
+      if (cached) {
+        const { at, data } = JSON.parse(cached);
+        if (Date.now() - at < 24 * 3600 * 1000) return data;
+      }
+    }
+    if (method !== 'GET') {
+      let body = opts.body;
+      try { body = JSON.parse(body); } catch { body = body; }
+      enqueuePending(`${method} ${path}`, body);
+      window.dispatchEvent(new CustomEvent('hc:syncrequired'));
+    }
+    if (isOnline()) throw err;
+    return null;
+  }
 }
 
 export const api = {
@@ -47,5 +99,3 @@ export const api = {
   chainStats: () => request('/chain/stats'),
   system: () => request('/system'),
 };
-
-export const WS = { WS: 1 };

@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { api } from './api.js';
+import { api, flushPending, pendingActions, isOnline } from './api.js';
 import { LANGS } from './i18n.js';
 import Home from './pages/Home.jsx';
 import Portal from './pages/Portal.jsx';
@@ -50,6 +50,7 @@ export default function App() {
     <Ctx.Provider value={value}>
       <div className="min-h-screen">
         <TopNav />
+        <OfflineSyncBanner />
         <main className="mx-auto max-w-7xl px-4 pb-16 pt-6 sm:px-6">
           <Routes>
             <Route path="/" element={<Home />} />
@@ -131,6 +132,42 @@ function TopNav() {
       </nav>
       {loc.pathname === '/health' && null}
     </header>
+  );
+}
+
+function OfflineSyncBanner() {
+  const [state, setState] = useState({ online: isOnline(), pending: pendingActions().length, kind: '' });
+  useEffect(() => {
+    const update = () => setState(s => ({ ...s, online: isOnline(), pending: pendingActions().length }));
+    const markPending = () => setState(s => ({ ...s, kind: 'action' }));
+    const onOnline = () => { flushPending().then(() => { update(); setState(s => ({ ...s, kind: 'synced' })); setTimeout(update, 2500); }); };
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', update);
+    window.addEventListener('storage', update);
+    window.addEventListener('hc:syncrequired', markPending);
+    window.addEventListener('hc:sync', update);
+    return () => {
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', update);
+      window.removeEventListener('storage', update);
+      window.removeEventListener('hc:syncrequired', markPending);
+      window.removeEventListener('hc:sync', update);
+    };
+  }, []);
+  const visible = !state.online || state.pending > 0 || state.kind === 'synced';
+  if (!visible) return null;
+  return (
+    <div className={`sticky top-[68px] z-30 flex items-center justify-center gap-3 px-4 py-2 text-xs font-bold ${state.online ? 'bg-leaf-700 text-white' : 'bg-warn text-bee-900'}`}>
+      {state.online ? (
+        <>
+          <span>📶 Back online · {state.pending} action{state.pending !== 1 && 's'} queued locally</span>
+          <button onClick={() => flushPending().then(() => setState({ online: true, pending: pendingActions().length, kind: 'synced' }))} className="rounded-full bg-white px-3 py-1 text-bee-900 hover:bg-honey-100">Sync now</button>
+          {state.kind === 'synced' && state.pending === 0 && <span className="opacity-80">→ synced ✓</span>}
+        </>
+      ) : (
+        <span>📴 Offline mode — reads from local cache, actions queued for auto-sync when the network returns.</span>
+      )}
+    </div>
   );
 }
 
