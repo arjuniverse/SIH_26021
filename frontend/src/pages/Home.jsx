@@ -20,7 +20,7 @@ export default function Home() {
   useState(() => { api.system().then(setSys).catch(() => {}); }, []);
   return (
     <div>
-      <section className="grid-hex relative overflow-hidden rounded-3xl bg-gradient-to-br from-bee-900 via-bee-800 to-bee-950 px-6 py-14 text-white sm:px-12">
+      <section className="grid-hex home-hero-readable relative overflow-hidden rounded-3xl bg-gradient-to-br from-bee-900 via-bee-800 to-bee-950 px-6 py-14 text-white sm:px-12">
         <div className="pointer-events-none absolute -right-10 -top-16 text-[220px] opacity-10">🐝</div>
         <div className="relative max-w-2xl">
           <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-bold tracking-wide">
@@ -29,9 +29,9 @@ export default function Home() {
           <h1 className="display mt-5 text-4xl font-black leading-tight sm:text-6xl">
             Every drop of honey, <span className="text-honey-400">on the chain.</span>
           </h1>
-          <p className="mt-4 max-w-xl text-base text-white/70 sm:text-lg">
+          <p className="home-hero-crisp mt-4 max-w-xl text-base font-medium text-white sm:text-lg">
             Honey Chain connects rural beekeepers with IoT hive sensors, AI health & yield intelligence, blockchain batch
-            traceability and instant QR verification — from <b className="text-honey-300">hive to bottle</b>.
+            traceability and instant QR verification — from <b className="font-bold text-honey-300">hive to bottle</b>.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link to="/beekeeper" className="rounded-full bg-honey-500 px-6 py-3 font-bold text-bee-950 shadow-lg shadow-honey-500/25 transition hover:bg-honey-400">🧑‍🌾 Beekeeper Dashboard</Link>
